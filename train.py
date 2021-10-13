@@ -15,7 +15,8 @@ import re
 import json
 import tempfile
 import torch
-import dnnlib
+from dnnlib import EasyDict
+from dnnlib import util
 
 from training import training_loop
 from metrics import metric_main
@@ -28,6 +29,8 @@ class UserError(Exception):
     pass
 
 #----------------------------------------------------------------------------
+
+
 
 def setup_training_loop_kwargs(
     # General options (not included in desc).
@@ -65,7 +68,7 @@ def setup_training_loop_kwargs(
     nobench    = None, # Disable cuDNN benchmarking: <bool>, default = False
     workers    = None, # Override number of DataLoader workers: <int>, default = 3
 ):
-    args = dnnlib.EasyDict()
+    args = EasyDict()
 
     # ------------------------------------------
     # General options: gpus, snap, metrics, seed
@@ -104,10 +107,10 @@ def setup_training_loop_kwargs(
 
     assert data is not None
     assert isinstance(data, str)
-    args.training_set_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset', path=data, use_labels=True, max_size=None, xflip=False)
-    args.data_loader_kwargs = dnnlib.EasyDict(pin_memory=True, num_workers=3, prefetch_factor=2)
+    args.training_set_kwargs = EasyDict(class_name='training.dataset.ImageFolderDataset', path=data, use_labels=True, max_size=None, xflip=False)
+    args.data_loader_kwargs = EasyDict(pin_memory=True, num_workers=3, prefetch_factor=2)
     try:
-        training_set = dnnlib.util.construct_class_by_name(**args.training_set_kwargs) # subclass of training.dataset.Dataset
+        training_set = util.construct_class_by_name(**args.training_set_kwargs) # subclass of training.dataset.Dataset
         args.training_set_kwargs.resolution = training_set.resolution # be explicit about resolution
         args.training_set_kwargs.use_labels = training_set.has_labels # be explicit about labels
         args.training_set_kwargs.max_size = len(training_set) # be explicit about dataset size
@@ -161,7 +164,7 @@ def setup_training_loop_kwargs(
     }
 
     assert cfg in cfg_specs
-    spec = dnnlib.EasyDict(cfg_specs[cfg])
+    spec = EasyDict(cfg_specs[cfg])
     if cfg == 'auto':
         desc += f'{gpus:d}'
         spec.ref_gpus = gpus
@@ -173,8 +176,8 @@ def setup_training_loop_kwargs(
         spec.gamma = 0.0002 * (res ** 2) / spec.mb # heuristic formula
         spec.ema = spec.mb * 10 / 32
 
-    args.G_kwargs = dnnlib.EasyDict(class_name='training.networks.Generator', z_dim=512, w_dim=512, mapping_kwargs=dnnlib.EasyDict(), synthesis_kwargs=dnnlib.EasyDict())
-    args.D_kwargs = dnnlib.EasyDict(class_name='training.networks.Discriminator', block_kwargs=dnnlib.EasyDict(), mapping_kwargs=dnnlib.EasyDict(), epilogue_kwargs=dnnlib.EasyDict())
+    args.G_kwargs = EasyDict(class_name='training.networks.Generator', z_dim=512, w_dim=512, mapping_kwargs=EasyDict(), synthesis_kwargs=EasyDict())
+    args.D_kwargs = EasyDict(class_name='training.networks.Discriminator', block_kwargs=EasyDict(), mapping_kwargs=EasyDict(), epilogue_kwargs=EasyDict())
     args.G_kwargs.synthesis_kwargs.channel_base = args.D_kwargs.channel_base = int(spec.fmaps * 32768)
     args.G_kwargs.synthesis_kwargs.channel_max = args.D_kwargs.channel_max = 512
     args.G_kwargs.mapping_kwargs.num_layers = spec.map
@@ -182,9 +185,9 @@ def setup_training_loop_kwargs(
     args.G_kwargs.synthesis_kwargs.conv_clamp = args.D_kwargs.conv_clamp = 256 # clamp activations to avoid float16 overflow
     args.D_kwargs.epilogue_kwargs.mbstd_group_size = spec.mbstd
 
-    args.G_opt_kwargs = dnnlib.EasyDict(class_name='torch.optim.Adam', lr=spec.lrate, betas=[0,0.99], eps=1e-8)
-    args.D_opt_kwargs = dnnlib.EasyDict(class_name='torch.optim.Adam', lr=spec.lrate, betas=[0,0.99], eps=1e-8)
-    args.loss_kwargs = dnnlib.EasyDict(class_name='training.loss.StyleGAN2Loss', r1_gamma=spec.gamma)
+    args.G_opt_kwargs = EasyDict(class_name='torch.optim.Adam', lr=spec.lrate, betas=[0,0.99], eps=1e-8)
+    args.D_opt_kwargs = EasyDict(class_name='torch.optim.Adam', lr=spec.lrate, betas=[0,0.99], eps=1e-8)
+    args.loss_kwargs = EasyDict(class_name='training.loss.StyleGAN2Loss', r1_gamma=spec.gamma)
 
     args.total_kimg = spec.kimg
     args.batch_size = spec.mb
@@ -284,7 +287,7 @@ def setup_training_loop_kwargs(
 
     assert augpipe in augpipe_specs
     if aug != 'noaug':
-        args.augment_kwargs = dnnlib.EasyDict(class_name='training.augment.AugmentPipe', **augpipe_specs[augpipe])
+        args.augment_kwargs = EasyDict(class_name='training.augment.AugmentPipe', **augpipe_specs[augpipe])
 
     # ----------------------------------
     # Transfer learning: resume, freezed
@@ -361,7 +364,7 @@ def setup_training_loop_kwargs(
 #----------------------------------------------------------------------------
 
 def subprocess_fn(rank, args, temp_dir):
-    dnnlib.util.Logger(file_name=os.path.join(args.run_dir, 'log.txt'), file_mode='a', should_flush=True)
+    util.Logger(file_name=os.path.join(args.run_dir, 'log.txt'), file_mode='a', should_flush=True)
 
     # Init torch.distributed.
     if args.num_gpus > 1:
@@ -479,7 +482,7 @@ def main(ctx, outdir, dry_run, **config_kwargs):
       lsundog256     LSUN Dog trained at 256x256 resolution.
       <PATH or URL>  Custom network pickle.
     """
-    dnnlib.util.Logger(should_flush=True)
+    util.Logger(should_flush=True)
 
     # Setup training options.
     try:
