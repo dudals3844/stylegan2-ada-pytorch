@@ -34,17 +34,17 @@ def num_range(s: str) -> List[int]:
 
 #----------------------------------------------------------------------------
 
-@click.command()
-@click.pass_context
-@click.option('--network', 'network_pkl', help='Network pickle filename', required=True)
-@click.option('--seeds', type=num_range, help='List of random seeds')
-@click.option('--trunc', 'truncation_psi', type=float, help='Truncation psi', default=1, show_default=True)
-@click.option('--class', 'class_idx', type=int, help='Class label (unconditional if not specified)')
-@click.option('--noise-mode', help='Noise mode', type=click.Choice(['const', 'random', 'none']), default='const', show_default=True)
-@click.option('--projected-w', help='Projection result file', type=str, metavar='FILE')
-@click.option('--outdir', help='Where to save the output images', type=str, required=True, metavar='DIR')
+# @click.command()
+# @click.pass_context
+# @click.option('--network', 'network_pkl', help='Network pickle filename', required=True)
+# @click.option('--seeds', type=num_range, help='List of random seeds')
+# @click.option('--trunc', 'truncation_psi', type=float, help='Truncation psi', default=1, show_default=True)
+# @click.option('--class', 'class_idx', type=int, help='Class label (unconditional if not specified)')
+# @click.option('--noise-mode', help='Noise mode', type=click.Choice(['const', 'random', 'none']), default='const', show_default=True)
+# @click.option('--projected-w', help='Projection result file', type=str, metavar='FILE')
+# @click.option('--outdir', help='Where to save the output images', type=str, required=True, metavar='DIR')
 def generate_images(
-    ctx: click.Context,
+    # ctx: click.Context,
     network_pkl: str,
     seeds: Optional[List[int]],
     truncation_psi: float,
@@ -99,14 +99,14 @@ def generate_images(
             img = PIL.Image.fromarray(img[0].cpu().numpy(), 'RGB').save(f'{outdir}/proj{idx:02d}.png')
         return
 
-    if seeds is None:
-        ctx.fail('--seeds option is required when not using --projected-w')
+    # if seeds is None:
+    #     ctx.fail('--seeds option is required when not using --projected-w')
 
     # Labels.
     label = torch.zeros([1, G.c_dim], device=device)
     if G.c_dim != 0:
-        if class_idx is None:
-            ctx.fail('Must specify class label with --class when using a conditional network')
+        # if class_idx is None:
+            # ctx.fail('Must specify class label with --class when using a conditional network')
         label[:, class_idx] = 1
     else:
         if class_idx is not None:
@@ -124,6 +124,13 @@ def generate_images(
 #----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    generate_images() # pylint: disable=no-value-for-parameter
+    generate_images(network_pkl='./pretrain/network-snapshot-000176.pkl',
+                    seeds=[1,10],
+                    truncation_psi=0.5,
+                    noise_mode='random',
+                    outdir="./generate",
+                    class_idx=None,
+                    projected_w=None
+                    ) # pylint: disable=no-value-for-parameter
 
 #----------------------------------------------------------------------------

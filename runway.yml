@@ -1,11 +1,8 @@
 entrypoint: python runway_model.py
-python: 3.6
-cuda: 10.2
+python: 3.7
+cuda: 11.4
 spec:
   gpu: True
   cpu: False
-files:
-  ignore:
-    - checkpoints/*
 build_steps:
   - pip install -r requirements.txt
