@@ -4,5 +4,8 @@ cuda: 11.4
 spec:
   gpu: True
   cpu: False
+file:
+  ignore:
+    - pretrain/*
 build_steps:
   - pip install -r requirements.txt
